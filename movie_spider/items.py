@@ -12,6 +12,7 @@ class MovieSpiderItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
 
+    movie_id = scrapy.Field()
     movie_name = scrapy.Field()
     genre = scrapy.Field()
 
@@ -23,9 +24,9 @@ class MovieSpiderItem(scrapy.Item):
     producer = scrapy.Field()
     issuer = scrapy.Field()
 
-    actor_movie = scrapy.Field()
-    director_movie = scrapy.Field()
-    writer_movie = scrapy.Field()
+    actor = scrapy.Field()
+    director = scrapy.Field()
+    writer = scrapy.Field()
 
     person_info = scrapy.Field()
     # person_name = scrapy.Field()

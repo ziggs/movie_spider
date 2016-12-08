@@ -36,10 +36,10 @@ class MovieSpiderPipeline(object):
         self.person = []
         self.company = []
 
-        self.movie_id = 0
+        # self.movie_id = 0
 
-        self.person_id = 1
-        self.person_dict = {}
+        # self.person_id = 1
+        # self.person_dict = {}
 
         self.company_id = 1
         self.producer_id = []
@@ -47,29 +47,6 @@ class MovieSpiderPipeline(object):
 
     def process_item(self, item, spider):
         query = self.dbpool.runInteraction(self._conditional_insert, item)  # 调用插入的方法
-        # query = self.dbpool.runInteraction(self._insert_movie, item)
-        # query.addErrback(self._handle_error, item, spider)  # 调用异常处理方法
-        # query = self.dbpool.runInteraction(self._insert_release_date, item)
-        # query.addErrback(self._handle_error, item, spider)  # 调用异常处理方法
-        # query = self.dbpool.runInteraction(self._insert_genre, item)
-        # query.addErrback(self._handle_error, item, spider)  # 调用异常处理方法
-        # query = self.dbpool.runInteraction(self._insert_title, item)
-        # query.addErrback(self._handle_error, item, spider)  # 调用异常处理方法
-        # query = self.dbpool.runInteraction(self._insert_company, item)
-        # query.addErrback(self._handle_error, item, spider)  # 调用异常处理方法
-        # query = self.dbpool.runInteraction(self._insert_issuer, item)
-        # query.addErrback(self._handle_error, item, spider)  # 调用异常处理方法
-        # query = self.dbpool.runInteraction(self._insert_producer, item)
-        # query.addErrback(self._handle_error, item, spider)  # 调用异常处理方法
-        # query = self.dbpool.runInteraction(self._insert_person, item)
-        # query.addErrback(self._handle_error, item, spider)  # 调用异常处理方法
-        # query = self.dbpool.runInteraction(self._insert_name, item)
-        # query.addErrback(self._handle_error, item, spider)  # 调用异常处理方法
-        # query = self.dbpool.runInteraction(self._insert_director, item)
-        # query.addErrback(self._handle_error, item, spider)  # 调用异常处理方法
-        # query = self.dbpool.runInteraction(self._insert_writer, item)
-        # query.addErrback(self._handle_error, item, spider)  # 调用异常处理方法
-        # query = self.dbpool.runInteraction(self._insert_actor, item)
         query.addErrback(self._handle_error, item, spider)  # 调用异常处理方法
         return item
 
@@ -91,7 +68,7 @@ class MovieSpiderPipeline(object):
         self._insert_actor(tx, item)
 
     def _insert_movie(self, tx, item):
-        self.movie_id += 1
+        # self.movie_id += 1
         sql = "insert into movie(movie_id, runtime, language, movie_name) values(%s, %s, %s, %s);"
         runtime = "无"
         language = "无"
@@ -99,8 +76,8 @@ class MovieSpiderPipeline(object):
             runtime = item['runtime']
         if 'language' in item.keys():  # item.has_key('language'):
             language = item['language']
-        params = (self.movie_id, runtime, language, item['movie_name'])
-        # print (sql % params).decode("utf-8").encode("gbk")
+        # params = (self.movie_id, runtime, language, item['movie_name'])
+        params = (item['movie_id'], runtime, language, item['movie_name'])
         tx.execute(sql, params)
 
     def _insert_release_date(self, tx, item):
@@ -110,14 +87,14 @@ class MovieSpiderPipeline(object):
             for date in item['release_date']:
                 country = date.split("-")[0]
                 release_date = date.split("-")[1]
-                tx.execute(sql, (self.movie_id, country, release_date))
+                tx.execute(sql, (item['movie_id'], country, release_date))
 
     def _insert_genre(self, tx, item):
         sql = "insert into genre(movie_id, genre) values(%s, %s);"
         # movie_id = self.get_movie_id(tx, item['movie_name'])
         if 'genre' in item.keys():
             for genre in item["genre"].split("/"):
-                tx.execute(sql, (self.movie_id, genre))
+                tx.execute(sql, (item['movie_id'], genre))
 
     def _insert_title(self, tx, item):
         sql = "insert into title(movie_id, movie_title) values(%s, %s);"
@@ -125,7 +102,7 @@ class MovieSpiderPipeline(object):
         # movie_id = self.movie_id
         if 'title' in item.keys():
             for title in item['title']:
-                tx.execute(sql, (self.movie_id, title))
+                tx.execute(sql, (item['movie_id'], title))
 
     def _insert_company(self, tx, item):
         sql = "insert into company(company_id, company_name) values(%s, %s);"
@@ -153,7 +130,7 @@ class MovieSpiderPipeline(object):
             for issuer in self.issuer_id:
                 # company_id = self.get_company_id(tx, issuer)
                 # company_id = self.issuer_id.pop()
-                tx.execute(sql, (self.movie_id, issuer))
+                tx.execute(sql, (item['movie_id'], issuer))
             self.issuer_id = []
 
     def _insert_producer(self, tx, item):
@@ -164,63 +141,79 @@ class MovieSpiderPipeline(object):
             for producer in self.producer_id:
                 # company_id = self.get_company_id(tx, producer)
                 # company_id = self.producer_id.pop()
-                tx.execute(sql, (self.movie_id, producer))
+                tx.execute(sql, (item['movie_id'], producer))
             self.producer_id = []
 
     def _insert_person(self, tx, item):
         sql = "insert into person(person_id, person_birthday, person_biography, person_name) values(%s, %s, %s, %s);"
         if 'person_info' in item.keys():
             for person in item['person_info']:
-                person_name = person.split("/")[0]
-                if person_name not in self.person_dict.keys():
-                    person_birthday = person.split("/")[1]
-                    person_biography = person.split("/")[2].strip()
-                    tx.execute(sql, (self.person_id, person_birthday, person_biography, person_name))
-                    self.person_dict[person_name] = self.person_id
-                    self.person_id += 1
-                    self.person.append(person_name)
+                person_id = person.split("/")[0]
+                if person_id not in self.person:
+                    person_name = person.split("/")[1]
+                    person_birthday = person.split("/")[2]
+                    person_biography = person.split("/")[3].strip()
+                    tx.execute(sql, (person_id, person_birthday, person_biography, person_name))
+                    self.person.append(person_id)
+                    # self.person_id += 1
+                    # self.person.append(person_name)
 
     # def _insert_name(self, tx, item):
     #     pass
 
+    # def _insert_director(self, tx, item):
+    #     sql = "insert into director(movie_id, person_id) values(%s, %s);"
+    #     for director in item['director']:
+    #         if director not in self.person:
+    #             person_birthday = "无"
+    #             person_biography = "无"
+    #             for person in item['person_info']:
+    #                 if director == person.split("/")[1]:
+    #                     person_birthday = person.split("/")[2]
+    #                     person_biography = person.split("/")[3].strip()
+    #                     break
+    #             tx.execute(
+    #                 "insert into person(person_id, person_birthday, person_biography, person_name) values(%s, %s, %s, %s);",
+    #                 (director, person_birthday, person_biography, director))
+    #             self.person.append(director)
+    #             # self.person_id += 1
+    #             # self.person.append(director)
+    #         tx.execute(sql, (item['movie_id'], director))
+
     def _insert_director(self, tx, item):
         sql = "insert into director(movie_id, person_id) values(%s, %s);"
-        # movie_id = self.get_movie_id(tx, item['movie_name'])
-        # movie_id = self.movie_id
-        for director in item['director_movie']:
-            # person_id = self.get_person_id(tx, director.split("/")[1])
-            # person_id = self.director_id.pop()
-            if director not in self.person_dict.keys():
-                person_birthday = "无"
-                person_biography = "无"
-                for person in item['person_info']:
-                    if director == person.split("/")[0]:
-                        person_birthday = person.split("/")[1]
-                        person_biography = person.split("/")[2].strip()
-                        break
-                tx.execute("insert into person(person_id, person_birthday, person_biography, person_name) values(%s, %s, %s, %s);",(self.person_id, person_birthday, person_biography, director))
-                self.person_dict[director] = self.person_id
-                self.person_id += 1
-                self.person.append(director)
-            tx.execute(sql, (self.movie_id, self.person_dict[director]))
+        director = item['director']
+        if director not in self.person:
+            person_birthday = "无"
+            person_biography = "无"
+            for person in item['person_info']:
+                if director == person.split("/")[1]:
+                    person_birthday = person.split("/")[2]
+                    person_biography = person.split("/")[3].strip()
+                    break
+            tx.execute("insert into person(person_id, person_birthday, person_biography, person_name) values(%s, %s, %s, %s);", (director, person_birthday, person_biography, director))
+            self.person.append(director)
+                # self.person_id += 1
+                # self.person.append(director)
+        tx.execute(sql, (item['movie_id'], director))
 
     def _insert_writer(self, tx, item):
         sql = "insert into writer(movie_id, person_id) values(%s, %s);"
-        for writer in item['writer_movie']:
-            if writer not in self.person_dict.keys():
+        for writer in item['writer']:
+            if writer not in self.person:
                 person_birthday = "无"
                 person_biography = "无"
                 for person in item['person_info']:
-                    if writer == person.split("/")[0]:
-                        person_birthday = person.split("/")[1]
-                        person_biography = person.split("/")[2].strip()
+                    if writer == person.split("/")[1]:
+                        person_birthday = person.split("/")[2]
+                        person_biography = person.split("/")[3].strip()
                         break
-                tx.execute("insert into person(person_id, person_birthday, person_biography, person_name) values(%s, %s, %s, %s);",(self.person_id, person_birthday, person_biography, writer))
-                self.person_dict[writer] = self.person_id
-                self.person_id += 1
+                tx.execute("insert into person(person_id, person_birthday, person_biography, person_name) values(%s, %s, %s, %s);", (writer, person_birthday, person_biography, writer))
                 self.person.append(writer)
+                # self.person_id += 1
+                # self.person.append(writer)
             try:
-                tx.execute(sql, (self.movie_id, self.person_dict[writer]))
+                tx.execute(sql, (item['movie_id'], writer))
             except Exception:
                 print "ERROR: I don't know where it is, maybe is two same writers in one movie."
 
@@ -228,22 +221,22 @@ class MovieSpiderPipeline(object):
         sql = "insert into actor(movie_id, person_id) values(%s, %s);"
         # movie_id = self.get_movie_id(tx, item['movie_name'])
         # movie_id = self.movie_id
-        for actor in item['actor_movie']:
+        for actor in item['actor']:
             # person_id = self.get_person_id(tx, actor.split("/")[1])
             # person_id = self.actor_id.pop()
-            if actor not in self.person_dict.keys():
+            if actor not in self.person:
                 person_birthday = "无"
                 person_biography = "无"
                 for person in item['person_info']:
-                    if actor == person.split("/")[0]:
-                        person_birthday = person.split("/")[1]
-                        person_biography = person.split("/")[2].strip()
+                    if actor == person.split("/")[1]:
+                        person_birthday = person.split("/")[2]
+                        person_biography = person.split("/")[3].strip()
                         break
-                tx.execute("insert into person(person_id, person_birthday, person_biography, person_name) values(%s, %s, %s, %s);", (self.person_id, person_birthday, person_biography, actor))
-                self.person_dict[actor] = self.person_id
-                self.person_id += 1
+                tx.execute("insert into person(person_id, person_birthday, person_biography, person_name) values(%s, %s, %s, %s);", (actor, person_birthday, person_biography, actor))
                 self.person.append(actor)
-            tx.execute(sql, (self.movie_id, self.person_dict[actor]))
+                # self.person_id += 1
+                # self.person.append(actor)
+            tx.execute(sql, (item['movie_id'], actor))
 
     # def get_movie_id(self, tx, movie_name):
     #     sql = "select movie_id from movie where movie_name = %s;"
