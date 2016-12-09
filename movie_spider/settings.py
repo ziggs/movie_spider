@@ -66,7 +66,10 @@ ROBOTSTXT_OBEY = True
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
    'movie_spider.pipelines.MovieSpiderPipeline': 300,
+   # 'scrapy.contrib.pipeline.images.ImagesPipeline': 1
 }
+
+# IMAGES_STORE = 'image/movie'
 
 BOT_NAME = 'Mozilla/5.0'
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0'
@@ -75,7 +78,7 @@ RANDOMIZE_DOWNLOAD_DELAY = True
 COOKIES_ENABLED = True  # False
 CONCURRENT_ITEMS = 100
 
-# LOG_FILE = "LOG.log"
+LOG_FILE = "LOG.log"
 # LOG_LEVEL = 'INFO'
 # LOG_LEVEL = 'DEBUG'
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -93,17 +96,17 @@ AUTOTHROTTLE_MAX_DELAY = 60
 
 # Enable and configure HTTP caching (disabled by default)
 # See http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
-#HTTPCACHE_ENABLED = True
-#HTTPCACHE_EXPIRATION_SECS = 0
-#HTTPCACHE_DIR = 'httpcache'
-#HTTPCACHE_IGNORE_HTTP_CODES = []
-#HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+# HTTPCACHE_ENABLED = True
+# HTTPCACHE_EXPIRATION_SECS = 0
+# HTTPCACHE_DIR = 'httpcache'
+# HTTPCACHE_IGNORE_HTTP_CODES = []
+# HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
-#Mysql数据库的配置信息
+# Mysql数据库的配置信息
 MYSQL_HOST = '127.0.0.1'
-# MYSQL_DBNAME = 'movie_info'         #数据库名字
-MYSQL_DBNAME = 'mtime_info'
-MYSQL_USER = 'root'                 #数据库账号
-MYSQL_PASSWD = '102630'             #数据库密码
+# MYSQL_DBNAME = 'movie_info'
+MYSQL_DBNAME = 'mtime_info'         # 数据库名字
+MYSQL_USER = 'root'                 # 数据库账号
+MYSQL_PASSWD = '102630'             # 数据库密码
 
 MYSQL_PORT = 3306               #数据库端口

@@ -29,6 +29,10 @@ class MovieSpiderItem(scrapy.Item):
     writer = scrapy.Field()
 
     person_info = scrapy.Field()
+
+    image_url = scrapy.Field()
+    # movie_image = scrapy.Field()
+    # person_image = scrapy.Field()
     # person_name = scrapy.Field()
     # person_birth = scrapy.Field()
     # person_biog = scrapy.Field()
