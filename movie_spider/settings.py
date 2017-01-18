@@ -78,7 +78,7 @@ RANDOMIZE_DOWNLOAD_DELAY = True
 COOKIES_ENABLED = True  # False
 CONCURRENT_ITEMS = 100
 
-LOG_FILE = "LOG.log"
+# LOG_FILE = "LOG.log"
 # LOG_LEVEL = 'INFO'
 # LOG_LEVEL = 'DEBUG'
 # Enable and configure the AutoThrottle extension (disabled by default)

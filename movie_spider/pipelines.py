@@ -5,6 +5,9 @@
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
 
+import re
+import os
+import json
 import MySQLdb
 from scrapy import log
 import MySQLdb.cursors
@@ -12,7 +15,160 @@ from twisted.enterprise import adbapi
 
 
 class MovieSpiderPipeline(object):
+    def __init__(self):
+        try:
+            os.mkdir("json")
+        except WindowsError:
+            pass
+        self.movie_temp = {'homepage': 'http://www.mtime.com/'}
 
+    def process_item(self, item, spider):
+        self.save_movie(item)
+        if 'person_info' in item.keys():
+            for person in item['person_info']:
+                self.save_person(person)
+        return item
+
+    def save_movie(self, item):
+        temp = self.movie_temp
+        temp["id"] = int(item["movie_id"])
+        temp["title"] = item["movie_name"]
+        try:
+            temp["original_language"] = item["language"]
+        except KeyError:
+            pass
+        temp["poster_path"] = item["image_url"]
+        if "release_date" in item.keys():
+            for release in item["release_date"]:
+                country = release.split("-")[0]
+                if country == "中国":
+                    date = release.split("-")[1]
+                    if int("".join(list(re.findall(r"(\d+).*?(\d+).*?(\d+)", date)[0]))) > 10000:
+                        if date.replace("年", "-").replace("月", "-").replace(" ", "").endswith("-"):
+                            temp["release_date"] = date.replace("年", "-").replace("月", "-")[:-1].strip()
+                        else:
+                            temp["release_date"] = "-".join(list(re.findall(r"(\d+).*?(\d+).*?(\d+)", date)[0])) # date.replace("年", "-").replace("月", "-").replace("日", "")#
+                    else:
+                        temp["release_date"] = "".join(list(re.findall(r"(\d+).*?(\d+).*?(\d+)", date)[0]))
+                    break
+        temp["genres"] = self.get_genre(item)
+        temp["production_companies"] = self.get_company(item)
+
+        if "runtime" in item.keys():
+            if re.findall("^\d+h\d+min$", item["runtime"]) == []:
+                try:
+                    temp['runtime'] = int(re.match("(\d+)", item["runtime"]).group())
+                except AttributeError:
+                    temp['runtime'] = int(re.findall(".*?(\d+).*?", item["runtime"])[0])
+            else:
+                temp['runtime'] = int(re.findall(r"\d+h(\d+)min", item["runtime"])[0]) + 60
+        else:
+            temp["runtime"] = 0
+
+        credits = {}
+        credits["crew"] = self.get_crews(item)
+        credits["cast"] = self.get_casts(item)
+        temp["credits"] = credits
+
+        with open("json/movie_%d.json" % int(item["movie_id"]), "w") as file:
+            json.dump(temp, file)
+
+    def save_person(self, person):
+        person_info = {}
+        if len(person.split("/#")) == 6:
+            person_info["id"] = int(person.split("/#")[0])
+            person_info["name"] = person.split("/#")[1]
+            person_info["birthday"] = person.split("/#")[3]
+            person_info["biography"] = person.split("/#")[4].strip()
+            person_info["profile_path"] = person.split("/#")[5]
+        elif len(person.split("/#")) == 5:
+            person_info["id"] = int(person.split("/#")[0])
+            person_info["name"] = person.split("/#")[1]
+            person_info["birthday"] = person.split("/#")[2]
+            person_info["biography"] = person.split("/#")[3].strip()
+            person_info["profile_path"] = person.split("/#")[4]
+        if person_info["profile_path"] == "无":
+            person_info.pop("profile_path")
+        if person_info["birthday"] == "无":
+            person_info.pop("birthday")
+        if person_info["biography"] == "无":
+            person_info.pop("biography")
+        with open("json/person_%d.json" % int(person_info["id"]), "w") as file:
+            json.dump(person_info, file)
+
+    def get_crews(self, item):
+        crews = []
+        for person in item["person_info"]:
+            if item["director"] == person.split("/#")[0]:
+                director = {}
+                director["id"] = int(person.split("/#")[0])
+                director["name"] = person.split("/#")[1]
+                director["job"] = "Director"
+                director["profile_path"] = person.split("/#")[4]
+                crews.append(director)
+                break
+
+        for writer_id in item["writer"]:
+            for person in item["person_info"]:
+                person_id = person.split("/#")[0]
+                if person_id == writer_id:
+                    writer = {}
+                    writer["id"] = int(person.split("/#")[0])
+                    writer["name"] = person.split("/#")[1]
+                    writer["job"] = "Writer"
+                    writer["profile_path"] = person.split("/#")[4]
+                    crews.append(writer)
+                    break
+        return crews
+
+    def get_casts(self, item):
+        order = 1
+        casts = []
+        for actor_id in item["actor"]:
+            for person in item["person_info"]:
+                person_id = person.split("/#")[0]
+                if actor_id == person_id:
+                    actor = {}
+                    actor["id"] = int(person.split("/#")[0])
+                    actor["name"] = person.split("/#")[1]
+                    actor["character"] = person.split("/#")[2]
+                    actor["profile_path"] = person.split("/#")[5]
+                    actor["order"] = order
+                    order += 1
+                    casts.append(actor)
+                    break
+        return casts
+
+    def get_genre(self, item):
+        genres = []
+        for genre in item["genre"].split("/"):
+            genres.append({"name": genre})
+        return genres
+
+    def get_company(self, item):
+        ids = []
+        companies = []
+        if 'producer' in item.keys():
+            for company in item['producer']:
+                if int(company.split("/")[0]) in ids:
+                    continue
+                temp = {}
+                temp["id"] = int(company.split("/")[0])
+                temp["name"] = company.split("/")[1]
+                companies.append(temp)
+                ids.append(temp["id"])
+        if "issuer" in item.keys():
+            for company2 in item["issuer"]:
+                if int(company2.split("/")[0]) in ids:
+                    continue
+                temp2 = {}
+                temp2["id"] = int(company2.split("/")[0])
+                temp2["name"] = company2.split("/")[1]
+                companies.append(temp2)
+                ids.append(temp2["id"])
+        return companies
+
+"""
     @classmethod
     def from_settings(cls, settings):
         dbparams = dict(
@@ -222,3 +378,4 @@ class MovieSpiderPipeline(object):
 
     def _handle_error(self, failue, item, spider):
         print failue
+"""
